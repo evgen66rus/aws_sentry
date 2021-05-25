@@ -43,7 +43,7 @@ resource "aws_instance" "Sentry" {
     volume_type = "gp2"
     volume_size = 40
   }
-  vpc_security_group_ids = [aws_security_group.sentry_sg.id, aws_security_group.sentry_alb.id, aws_security_group.sentry_ssh.id]
+  vpc_security_group_ids = [aws_security_group.sentry_ssh.id, aws_security_group.sentry_sg.id]
   user_data = file("init-script.sh")
   tags = {
     Name = var.instance_name
@@ -78,14 +78,6 @@ resource "aws_security_group" "sentry_sg" {
   name        = "sentry_sg"
   description = "Allow inbound traffic to port 9000"
 
-  ingress {
-    description      = "allow from VPC"
-    from_port        = 9000
-    to_port          = 9000
-    protocol         = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
   egress {
     from_port        = 0
     to_port          = 0
@@ -98,7 +90,14 @@ resource "aws_security_group" "sentry_sg" {
   }
 }
 
-
+resource "aws_security_group_rule" "sentry" {
+  type              = "ingress"
+  from_port         = 9000
+  to_port           = 9000
+  protocol          = "tcp"
+  source_security_group_id = aws_security_group.sentry_alb.id
+  security_group_id = aws_security_group.sentry_sg.id
+}
 
 resource "aws_security_group" "sentry_ssh" {
   name        = "sentry_ssh"
@@ -135,4 +134,3 @@ resource "aws_route53_record" "sentry" {
     evaluate_target_health = true
   }
 }
-
